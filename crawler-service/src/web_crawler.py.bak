@@ -1,0 +1,271 @@
+"""
+Real Web Crawler using BeautifulSoup
+Crawls full article content from Vietnamese news websites
+"""
+import requests
+from bs4 import BeautifulSoup
+from typing import Optional, Dict, List
+from urllib.parse import urljoin
+import logging
+import re
+
+logger = logging.getLogger(__name__)
+
+class ArticleCrawler:
+            '.setAttribute',
+            'typeof ',
+            'typeof window',
+        ]
+        
+        # Count JS patterns - if 2+ patterns, it's definitely code
+        pattern_count = sum(1 for pattern in js_patterns if pattern in text_lower)
+        if pattern_count >= 2:
+            return True
+        
+        # If text starts with comment or function call, it's code
+        if text_lower.startswith('//') or text_lower.startswith('/*') or text_lower.startswith('(function'):
+            return True
+        
+        # If contains { and }, probably code
+        if text.count('{') >= 2 and text.count('}') >= 2:
+            return True
+        
+        return False
+
+    def _collect_paragraphs_with_images(self, container, page_url: str, p_selector: Optional[Dict] = None) -> str:
+        """Collect article content preserving the original HTML structure and order"""
+        from bs4 import NavigableString
+        
+        # Remove unwanted elements first
+        for unwanted in container.find_all(['script', 'style', 'iframe', 'noscript']):
+            unwanted.decompose()
+        
+        # Remove ads and tracking elements (targeted regex to avoid nuking layout widgets)
+        ads_selectors = [
+            {'class': re.compile(r'(\b(ad|ads|advertisement|sponsor|taboola|outbrain|banner)\b)', re.I)},
+            {'id': re.compile(r'(\b(ad|ads|advertisement|sponsor|taboola|outbrain|banner)\b)', re.I)},
+        ]
+        for selector in ads_selectors:
+            for ad in container.find_all(['div', 'section'], selector):
+                ad.decompose()
+
+        # Remove inline scripts that contain known ad keywords
+        for script in container.find_all('script'):
+            script_text = script.get_text(strip=True).lower()
+            if any(k in script_text for k in ['taboola', 'outbrain', 'mutexads', 'runinit', '_mgq', '_taboola']):
+                script.decompose()
+        
+        content_parts: List[str] = []
+        
+        # Process all direct children in order
+        for elem in container.children:
+            # Skip empty strings and whitespace
+            if isinstance(elem, NavigableString):
+                text = str(elem).strip()
+                # Ignore script-like text
+                if text and len(text) > 20:
+                    if self._is_javascript_content(text):
+                        continue
+                    if text.startswith('(function') or text.startswith('//'):
+                        continue
+                    content_parts.append(f'<p>{text}</p>')
+                continue
+            
+            if not hasattr(elem, 'name') or not elem.name:
+                continue
+            
+            # Skip unwanted tags
+            if elem.name in ['script', 'style', 'iframe', 'noscript', 'button', 'input', 'form']:
+                continue
+            
+            # Skip elements with ads-related classes/ids (more precise)
+            elem_class = ' '.join(elem.get('class', [])).lower()
+            elem_id = (elem.get('id') or '').lower()
+            ads_re = re.compile(r'(\b(ad|ads|advertisement|sponsor|taboola|outbrain|banner)\b)', re.I)
+            if ads_re.search(elem_class) or ads_re.search(elem_id):
+                continue
+            
+            # Handle paragraph tags
+            if elem.name == 'p':
+                # Check if selector matches (if provided)
+                if p_selector and 'class_' in p_selector:
+                    elem_classes = elem.get('class', [])
+                    if p_selector['class_'] not in elem_classes:
+                        continue
+                
+                text = elem.get_text(strip=True)
+                # Filter out JavaScript-like content
+                if text and len(text) > 0:
+                    if self._is_javascript_content(text):
+                        continue
+                    if text.startswith('(function') or text.startswith('//'):
+                        continue
+                    content_parts.append(f'<p>{text}</p>')
+            
+            # Handle image tags directly
+            elif elem.name == 'img':
+                img_src = elem.get('data-src') or elem.get('src') or elem.get('data-original')
+                abs_src = self._abs_url(img_src, page_url)
+                if abs_src:
+                    alt = elem.get('alt') or ''
+                    content_parts.append(f'<img src="{abs_src}" alt="{alt}" />')
+            
+            # Handle figure with images
+            elif elem.name == 'figure':
+                # Skip if it's ads
+                if 'box-' in elem_class or 'widget' in elem_class:
+                    continue
+                    
+                img = elem.find('img')
+                if img:
+                    img_src = img.get('data-src') or img.get('src') or img.get('data-original')
+                    abs_src = self._abs_url(img_src, page_url)
+                    if abs_src:
+                        alt = img.get('alt') or ''
+                        content_parts.append(f'<img src="{abs_src}" alt="{alt}" />')
+                
+                # Add caption if exists
+                figcaption = elem.find('figcaption')
+                if figcaption:
+                    caption_text = figcaption.get_text(strip=True)
+                    if caption_text:
+                        content_parts.append(f'<p><em>{caption_text}</em></p>')
+            
+            # Handle divs and other containers - recursively collect content
+            elif elem.name in ['div', 'section', 'article']:
+                ads_re = re.compile(r'(\b(ad|ads|advertisement|sponsor|taboola|outbrain|banner)\b)', re.I)
+                if ads_re.search(elem_class) or ads_re.search(elem_id):
+                    continue
+
+                nested_content = self._collect_paragraphs_with_images(elem, page_url, p_selector)
+                if nested_content:
+                    content_parts.append(nested_content)
+        
+        return '\n'.join(content_parts)
+    
+    def _is_javascript_content(self, text: str) -> bool:
+        """Check if text is JavaScript code or timestamp or ads - AGGRESSIVE FILTER"""
+        if not text or len(text) < 5:
+            return False
+
+        text_lower = text.lower()
+
+        # ======= HARD BLOCK: Ads/JavaScript Keywords =======
+        absolute_blocklist = [
+            # Ad networks
+            'taboola', 'outbrain', 'arfasync', 'mutexads',
+            '_taboola', 'taboola-mid-article-widget', 'mid article widget',
+
+            # Window/DOM manipulation
+            'window.runinit', 'window.pagesettings', 'window._isadshidden',
+            'window.lanuocngoai', 'window._mgq', 'window._chkprlink',
+            'runinit = window.runinit',
+
+            # Function/object references
+            'htmltoelement', 'template.innerhtml', 'template.content.firstchild',
+            'childnode.after', 'childnodes', 'parentnode.insertbefore',
+            'document.queryselector', 'document.createelement',
+            'document.createcomment', 'root.queryselectorall',
+            'target.parentnode.insertbefore', 'vcsortableinpreviewmode',
+
+            # Ads insertion patterns
+            'box dành cho bạn', 'chèn ads giữa bài',
+            'pagesettings.allow3rd', '_chkprlink', 'isnuocngoai',
+
+            # Ad keywords in Vietnamese
+            'dành cho bạn', 'taboola', 'tag:taboola', '"taboola"',
+
+            # Event handlers and callbacks
+            'addeventlistener', '.push(', '.call(', 'runinit.push',
+            'arfasync.push', '_taboola.push', '_mgq.push',
+
+            # Config patterns (keep specific keys, drop generic words)
+            '"mode":', '"target_type":',
+
+            # Tracking/measurement
+            '_chkprlink', 'lanuocngoai', 'isnuocngoai', 'pagesettings',
+
+            # Structural manipulation
+            'isphotorvideo', 'childrennodes.length',
+        ]
+
+        for keyword in absolute_blocklist:
+            if keyword in text_lower:
+                return True
+
+        # Detect timestamps (GMT, UTC, timezone format)
+        if re.search(r'\d{4}-\d{2}-\d{2}.*\d{2}:\d{2}:\d{2}\s*(GMT|UTC|Indochina|[+-]\d{2}:\d{2})', text):
+            return True
+        if re.search(r'(Mon|Tue|Wed|Thu|Fri|Sat|Sun).*\d{4}\s+\d{2}:\d{2}:\d{2}', text):
+            return True
+
+        # ======= PATTERNS: Clear JavaScript Code =======
+        js_patterns = [
+            'function(', 'function {', 'function(){', 'function () {',
+            'document.createelement', 'document.queryselector',
+            '.appendchild', '.insertbefore', 'addeventlistener',
+            'getelementbyid', 'getelementsbyclass', '.push({', '.call(',
+            'catch(', 'catch(e)', 'return template', 'try {', 'if (', 'for (',
+            'var ', 'const ', 'let ', '.getattribute', '.setattribute',
+            'typeof ', 'typeof window',
+        ]
+
+        # Count JS patterns - if 2+ patterns, it's definitely code
+        pattern_count = sum(1 for pattern in js_patterns if pattern in text_lower)
+        if pattern_count >= 2:
+            return True
+
+        # If text starts with comment or function call, it's code
+        if text_lower.startswith('//') or text_lower.startswith('/*') or text_lower.startswith('(function'):
+            return True
+
+        # If contains { and }, probably code
+        if text.count('{') >= 2 and text.count('}') >= 2:
+            return True
+
+        return False
+    def crawl_generic(self, url: str) -> Optional[Dict]:
+        """Generic crawler for unknown sites"""
+        try:
+            response = requests.get(url, headers=self.headers, timeout=self.timeout)
+            response.encoding = 'utf-8'
+            soup = BeautifulSoup(response.content, 'html.parser')
+            
+            # Try common article selectors
+            article_body = (
+                soup.find('article') or
+                soup.find('div', class_=re.compile(r'article|content|detail|body', re.I)) or
+                soup.find('main')
+            )
+            
+            if not article_body:
+                logger.warning(f"Could not find article body for {url}")
+                return None
+            
+            content_html = self._collect_paragraphs_with_images(article_body, url)
+            
+            if len(content_html) < 100:  # Too short, probably failed
+                return None
+            
+            return {
+                'content': content_html,
+                'success': True
+            }
+        except Exception as e:
+            logger.error(f"Error crawling generic {url}: {e}")
+            return None
+    
+    def crawl_article(self, url: str) -> Optional[Dict]:
+        """Route to appropriate crawler based on domain"""
+        logger.info(f"Crawling article: {url}")
+        
+        if 'vnexpress.net' in url:
+            return self.crawl_vnexpress(url)
+        elif 'dantri.com.vn' in url:
+            return self.crawl_dantri(url)
+        elif 'thanhnien.vn' in url:
+            return self.crawl_thanhnien(url)
+        elif 'tuoitre.vn' in url:
+            return self.crawl_tuoitre(url)
+        else:
+            return self.crawl_generic(url)

@@ -1,0 +1,37 @@
+### Health Check API Tests for All Services
+### Following RFC 2616 HTTP/1.1 Protocol
+### VS Code REST Client Extension Required
+
+@baseUrl = {{baseUrl}}
+@recommendationUrl = {{recommendationUrl}}
+@summaryUrl = {{summaryUrl}}
+
+###
+# Core API Service - Root endpoint
+# GET /
+GET {{baseUrl}}/ HTTP/1.1
+
+###
+# Core API Service - Health check
+# GET /health
+GET {{baseUrl}}/health HTTP/1.1
+
+###
+# Recommendation Service - Root endpoint
+# GET /
+GET {{recommendationUrl}}/ HTTP/1.1
+
+###
+# Recommendation Service - Health check
+# GET /health
+GET {{recommendationUrl}}/health HTTP/1.1
+
+###
+# Summary Service - Root endpoint
+# GET /
+GET {{summaryUrl}}/ HTTP/1.1
+
+###
+# Summary Service - Health check
+# GET /health
+GET {{summaryUrl}}/health HTTP/1.1

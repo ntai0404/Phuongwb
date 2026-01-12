@@ -1,0 +1,198 @@
+### Template for Creating New HTTP Test Files
+### Following RFC 2616 HTTP/1.1 Protocol
+### VS Code REST Client Extension Required
+
+# Copy this template when adding new API endpoints
+
+@baseUrl = {{baseUrl}}
+@accessToken = YOUR_ACCESS_TOKEN_HERE
+
+###############################################
+# SERVICE NAME - Brief Description
+###############################################
+
+###
+# Endpoint description
+# Method: GET/POST/PUT/DELETE
+# Path: /api/v1/your-endpoint
+# Auth: Required/Not Required
+# Expected Response: 200 OK
+# @name requestName
+GET {{baseUrl}}/api/v1/your-endpoint HTTP/1.1
+
+###
+# POST Request Template
+# @name createResource
+POST {{baseUrl}}/api/v1/resources HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "field1": "value1",
+  "field2": "value2"
+}
+
+###
+# Extract value from response
+@resourceId = {{createResource.response.body.id}}
+
+###
+# GET Request with Path Parameter
+GET {{baseUrl}}/api/v1/resources/{{resourceId}} HTTP/1.1
+Authorization: Bearer {{accessToken}}
+
+###
+# GET Request with Query Parameters
+GET {{baseUrl}}/api/v1/resources?page=1&per_page=10&filter=active HTTP/1.1
+
+###
+# PUT Request Template
+PUT {{baseUrl}}/api/v1/resources/{{resourceId}} HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "field1": "updated_value",
+  "field2": "updated_value"
+}
+
+###
+# DELETE Request Template
+DELETE {{baseUrl}}/api/v1/resources/{{resourceId}} HTTP/1.1
+Authorization: Bearer {{accessToken}}
+
+###############################################
+# ERROR CASES
+###############################################
+
+###
+# Test invalid input (should return 400)
+POST {{baseUrl}}/api/v1/resources HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "invalid_field": "value"
+}
+
+###
+# Test unauthorized access (should return 401)
+GET {{baseUrl}}/api/v1/protected-endpoint HTTP/1.1
+
+###
+# Test not found (should return 404)
+GET {{baseUrl}}/api/v1/resources/99999 HTTP/1.1
+
+###############################################
+# NOTES AND BEST PRACTICES
+###############################################
+
+# 1. Request Format (RFC 2616)
+#    - Request Line: METHOD URI HTTP/VERSION
+#    - Headers: Field-Name: Field-Value
+#    - Blank line
+#    - Message Body (for POST/PUT)
+
+# 2. Separate requests with ###
+
+# 3. Use @name for requests you want to reference later
+
+# 4. Extract response values:
+#    @variableName = {{requestName.response.body.field}}
+
+# 5. Use descriptive comments:
+#    ###
+#    # What: Brief description
+#    # Why: Purpose of this test
+#    # Expected: What should happen
+
+# 6. Include authentication when needed:
+#    Authorization: Bearer {{accessToken}}
+
+# 7. Always specify Content-Type for POST/PUT:
+#    Content-Type: application/json
+
+# 8. Test both success and error cases
+
+# 9. Use variables for reusability:
+#    @baseUrl, @accessToken, @resourceId
+
+# 10. Group related requests together
+
+###############################################
+# EXAMPLE: COMPLETE CRUD FLOW
+###############################################
+
+###
+# 1. Create a new resource
+# @name create
+POST {{baseUrl}}/api/v1/resources HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "name": "Test Resource",
+  "description": "Created for testing"
+}
+
+###
+# Extract the created resource ID
+@newResourceId = {{create.response.body.id}}
+
+###
+# 2. Read the created resource
+GET {{baseUrl}}/api/v1/resources/{{newResourceId}} HTTP/1.1
+Authorization: Bearer {{accessToken}}
+
+###
+# 3. Update the resource
+PUT {{baseUrl}}/api/v1/resources/{{newResourceId}} HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "name": "Updated Resource",
+  "description": "Updated for testing"
+}
+
+###
+# 4. List all resources
+GET {{baseUrl}}/api/v1/resources HTTP/1.1
+Authorization: Bearer {{accessToken}}
+
+###
+# 5. Delete the resource
+DELETE {{baseUrl}}/api/v1/resources/{{newResourceId}} HTTP/1.1
+Authorization: Bearer {{accessToken}}
+
+###
+# 6. Verify deletion (should return 404)
+GET {{baseUrl}}/api/v1/resources/{{newResourceId}} HTTP/1.1
+Authorization: Bearer {{accessToken}}
+
+###############################################
+# CHECKLIST FOR NEW HTTP FILES
+###############################################
+
+# ✅ File follows RFC 2616 format
+# ✅ All requests have descriptive comments
+# ✅ Variables are defined at the top
+# ✅ Request naming (@name) used appropriately
+# ✅ Authentication included where needed
+# ✅ Content-Type header for POST/PUT
+# ✅ Query parameters properly formatted
+# ✅ Success cases tested
+# ✅ Error cases tested
+# ✅ Response extraction demonstrated
+# ✅ CRUD flow complete (if applicable)
+# ✅ File documented in README.md
+# ✅ Added to main documentation
+
+###############################################
+# REFERENCE LINKS
+###############################################
+
+# RFC 2616: https://www.ietf.org/rfc/rfc2616.txt
+# REST Client: https://github.com/Huachao/vscode-restclient
+# Documentation: ./README.md
+# Quick Reference: ./QUICK_REFERENCE.md

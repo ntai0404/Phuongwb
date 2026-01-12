@@ -1,0 +1,83 @@
+### RSS Sources API Tests
+### Following RFC 2616 HTTP/1.1 Protocol
+### VS Code REST Client Extension Required
+
+@baseUrl = {{baseUrl}}
+@accessToken = YOUR_ACCESS_TOKEN_HERE
+
+###
+# Get list of active RSS sources (Public access)
+# GET /api/v1/sources
+GET {{baseUrl}}/api/v1/sources HTTP/1.1
+
+###
+# Add new RSS source (Admin only)
+# POST /api/v1/sources
+# @name createSource
+POST {{baseUrl}}/api/v1/sources HTTP/1.1
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "name": "VnExpress",
+  "url": "https://vnexpress.net/rss/tin-moi-nhat.rss",
+  "category": "News"
+}
+
+###
+# Extract created source ID
+@sourceId = {{createSource.response.body.id}}
+
+###
+# Add another RSS source example
+# POST /api/v1/sources
+POST {{baseUrl}}/api/v1/sources HTTP/1.1
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "name": "Tuổi Trẻ Online",
+  "url": "https://tuoitre.vn/rss/tin-moi-nhat.rss",
+  "category": "News"
+}
+
+###
+# Update RSS source (Admin only)
+# PUT /api/v1/sources/{source_id}
+PUT {{baseUrl}}/api/v1/sources/1 HTTP/1.1
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "name": "VnExpress Updated",
+  "is_active": true
+}
+
+###
+# Update RSS source URL
+# PUT /api/v1/sources/{source_id}
+PUT {{baseUrl}}/api/v1/sources/1 HTTP/1.1
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "url": "https://vnexpress.net/rss/thoi-su.rss",
+  "category": "Politics"
+}
+
+###
+# Deactivate RSS source
+# PUT /api/v1/sources/{source_id}
+PUT {{baseUrl}}/api/v1/sources/1 HTTP/1.1
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "is_active": false
+}
+
+###
+# Delete RSS source (Admin only)
+# DELETE /api/v1/sources/{source_id}
+DELETE {{baseUrl}}/api/v1/sources/1 HTTP/1.1
+Authorization: Bearer {{accessToken}}

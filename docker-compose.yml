@@ -1,0 +1,184 @@
+version: "3.8"
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: phuong-postgres
+    environment:
+      POSTGRES_DB: newsdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - phuong-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: phuong-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - phuong-network
+
+  # RabbitMQ Message Broker
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: phuong-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - phuong-network
+
+  # Qdrant Vector Database
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: phuong-qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks:
+      - phuong-network
+
+  # Core API Service (Central Backend)
+  core-api-service:
+    build:
+      context: .
+      dockerfile: core-api-service/Dockerfile
+    container_name: phuong-core-api
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: newsdb
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+      RECOMMENDATION_URL: http://recommendation-service:8001
+      SECRET_KEY: your-secret-key-change-in-production
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - phuong-network
+    restart: unless-stopped
+
+  # Crawler Service
+  crawler-service:
+    build:
+      context: .
+      dockerfile: crawler-service/Dockerfile
+    container_name: phuong-crawler-service
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: newsdb
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      core-api-service:
+        condition: service_started
+    networks:
+      - phuong-network
+    restart: unless-stopped
+    command: python src/main.py
+
+  # Recommendation Service
+  recommendation-service:
+    build:
+      context: .
+      dockerfile: recommendation-service/Dockerfile
+    container_name: phuong-recommendation
+    environment:
+      QDRANT_HOST: qdrant
+      QDRANT_PORT: 6333
+      MODEL_NAME: sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+    ports:
+      - "8001:8001"
+    depends_on:
+      - qdrant
+    networks:
+      - phuong-network
+    restart: unless-stopped
+
+  # Summary Service
+  summary-service:
+    build:
+      context: .
+      dockerfile: summary-service/Dockerfile
+    container_name: phuong-summary
+    ports:
+      - "8002:8002"
+    networks:
+      - phuong-network
+    restart: unless-stopped
+
+  # Frontend (Next.js)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: phuong-frontend
+    environment:
+      NEXT_PUBLIC_API_URL: http://core-api-service:8080
+      NEXT_PUBLIC_RECOMMEND_API_URL: http://recommendation-service:8001
+    ports:
+      - "3000:3000"
+    depends_on:
+      - core-api-service
+    networks:
+      - phuong-network
+    restart: unless-stopped
+
+networks:
+  phuong-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:
+  qdrant_data:

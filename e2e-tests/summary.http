@@ -1,0 +1,59 @@
+### Summary Service API Tests
+### Following RFC 2616 HTTP/1.1 Protocol
+### VS Code REST Client Extension Required
+
+@summaryUrl = {{summaryUrl}}
+
+###
+# Get service information
+# GET /
+GET {{summaryUrl}}/ HTTP/1.1
+
+###
+# Health check
+# GET /health
+GET {{summaryUrl}}/health HTTP/1.1
+
+###
+# Generate summary for Vietnamese article
+# POST /api/v1/summary/generate
+POST {{summaryUrl}}/api/v1/summary/generate HTTP/1.1
+Content-Type: application/json
+
+{
+  "text": "Trí tuệ nhân tạo (AI) đang ngày càng trở nên quan trọng trong cuộc sống hàng ngày của chúng ta. Từ các hệ thống nhận dạng giọng nói như Siri và Alexa đến xe tự lái của Tesla, AI đang cách mạng hóa nhiều ngành công nghiệp. Các công ty công nghệ lớn như Google, Microsoft và Amazon đang đầu tư hàng tỷ đô la vào nghiên cứu và phát triển AI. Trong lĩnh vực y tế, AI đang được sử dụng để chẩn đoán bệnh chính xác hơn và phát triển các phương pháp điều trị mới. Trong giáo dục, AI giúp cá nhân hóa trải nghiệm học tập cho từng học sinh. Tuy nhiên, sự phát triển của AI cũng đặt ra nhiều câu hỏi về đạo đức, quyền riêng tư và tác động đến việc làm của con người.",
+  "url": "https://example.com/article/ai-technology"
+}
+
+###
+# Generate summary for English article
+# POST /api/v1/summary/generate
+POST {{summaryUrl}}/api/v1/summary/generate HTTP/1.1
+Content-Type: application/json
+
+{
+  "text": "Artificial intelligence (AI) is rapidly transforming various industries and aspects of our daily lives. From virtual assistants like Siri and Alexa to autonomous vehicles, AI is revolutionizing how we interact with technology. Major tech companies including Google, Microsoft, and Amazon are investing billions of dollars in AI research and development. In healthcare, AI is being used to improve diagnostic accuracy and develop new treatment methods. In education, AI helps personalize learning experiences for individual students. However, the advancement of AI also raises important questions about ethics, privacy, and its impact on human employment.",
+  "url": "https://example.com/article/ai-future"
+}
+
+###
+# Generate summary with minimal text
+# POST /api/v1/summary/generate
+POST {{summaryUrl}}/api/v1/summary/generate HTTP/1.1
+Content-Type: application/json
+
+{
+  "text": "Climate change is one of the most pressing issues facing humanity today. Rising global temperatures are causing more frequent and severe weather events, including hurricanes, droughts, and wildfires. Scientists warn that we must take immediate action to reduce greenhouse gas emissions and transition to renewable energy sources.",
+  "url": "https://example.com/article/climate-change"
+}
+
+###
+# Test with very short text (should fail)
+# POST /api/v1/summary/generate
+POST {{summaryUrl}}/api/v1/summary/generate HTTP/1.1
+Content-Type: application/json
+
+{
+  "text": "Short text",
+  "url": "https://example.com/article/short"
+}

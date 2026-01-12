@@ -1,0 +1,69 @@
+@startuml Use Case Diagram - Phuong Web
+
+title Use Case Diagram - Phuong Web News System
+
+left to right direction
+
+actor "Người dùng" as User
+rectangle "Hệ thống Phuong Web" {
+    usecase "UC đăng ký tài khoản" as UC1
+    usecase "UC đăng nhập hệ thống" as UC2
+    usecase "UC xem danh sách tin tức" as UC3
+    usecase "UC đọc chi tiết tin tức" as UC4
+    usecase "UC lưu trữ tin tức" as UC5
+    usecase "UC xem tin tức đã lưu" as UC6
+    usecase "UC xem lịch sử đọc" as UC7
+    usecase "UC tìm kiếm tin tức" as UC8
+    usecase "UC nhận gợi ý tin tức cá nhân hóa" as UC9
+    usecase "UC xem tóm tắt tin tức" as UC10
+
+    usecase "UC quản lý nguồn RSS" as UC11
+    usecase "UC quản lý tác vụ crawler" as UC12
+    usecase "UC quản lý người dùng" as UC13
+}
+actor "Quản trị viên" as Admin
+actor "Hệ thống bên ngoài" as External
+
+User --> UC1
+User --> UC2
+User --> UC3
+User --> UC4
+User --> UC5
+User --> UC6
+User --> UC7
+User --> UC8
+User --> UC9
+User --> UC10
+
+Admin --> UC11
+Admin --> UC12
+Admin --> UC13
+
+External --> UC9 : cung cấp dữ liệu AI
+External --> UC10 : cung cấp dữ liệu AI
+
+note right of UC5
+    Yêu cầu đăng nhập
+end note
+
+note right of UC6
+    Yêu cầu đăng nhập
+end note
+
+note right of UC7
+    Yêu cầu đăng nhập
+end note
+
+note right of UC11
+    Chỉ dành cho Admin
+end note
+
+note right of UC12
+    Chỉ dành cho Admin
+end note
+
+note right of UC13
+    Chỉ dành cho Admin
+end note
+
+@enduml

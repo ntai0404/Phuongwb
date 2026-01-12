@@ -1,0 +1,75 @@
+### Authentication API Tests
+### Following RFC 2616 HTTP/1.1 Protocol
+### VS Code REST Client Extension Required
+
+@baseUrl = {{baseUrl}}
+
+### Variables for test data (update these)
+@username = testuser
+@email = test@example.com
+@password = securepassword123
+@accessToken = YOUR_ACCESS_TOKEN_HERE
+@refreshToken = YOUR_REFRESH_TOKEN_HERE
+
+###
+# Register a new user
+# POST /api/v1/auth/register
+POST {{baseUrl}}/api/v1/auth/register HTTP/1.1
+Content-Type: application/json
+
+{
+  "username": "{{username}}",
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+###
+# Login with credentials
+# POST /api/v1/auth/login
+# @name login
+POST {{baseUrl}}/api/v1/auth/login HTTP/1.1
+Content-Type: application/json
+
+{
+  "username": "{{username}}",
+  "password": "{{password}}"
+}
+
+###
+# Extract access token from login response
+@accessToken = {{login.response.body.access_token}}
+@refreshToken = {{login.response.body.refresh_token}}
+
+###
+# Get current user profile
+# GET /api/v1/auth/users/me
+# Requires authentication
+GET {{baseUrl}}/api/v1/auth/users/me HTTP/1.1
+Authorization: Bearer {{accessToken}}
+
+###
+# Refresh access token
+# POST /api/v1/auth/refresh
+POST {{baseUrl}}/api/v1/auth/refresh HTTP/1.1
+Content-Type: application/json
+
+{
+  "refresh_token": "{{refreshToken}}"
+}
+
+###
+# List all users (Admin only)
+# GET /api/v1/auth/users
+GET {{baseUrl}}/api/v1/auth/users HTTP/1.1
+Authorization: Bearer {{accessToken}}
+
+###
+# Update user role (Admin only)
+# PUT /api/v1/auth/users/{user_id}/role
+PUT {{baseUrl}}/api/v1/auth/users/2/role HTTP/1.1
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "role": "admin"
+}

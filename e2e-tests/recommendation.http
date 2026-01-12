@@ -1,0 +1,76 @@
+### Recommendation Service API Tests
+### Following RFC 2616 HTTP/1.1 Protocol
+### VS Code REST Client Extension Required
+
+@recommendationUrl = {{recommendationUrl}}
+
+###
+# Get service information
+# GET /
+GET {{recommendationUrl}}/ HTTP/1.1
+
+###
+# Health check
+# GET /health
+GET {{recommendationUrl}}/health HTTP/1.1
+
+###
+# Upsert article for indexing
+# POST /api/v1/vectors/upsert
+POST {{recommendationUrl}}/api/v1/vectors/upsert HTTP/1.1
+Content-Type: application/json
+
+{
+  "id": 123,
+  "title": "Công nghệ AI đang thay đổi thế giới",
+  "content": "Trí tuệ nhân tạo (AI) đang ngày càng trở nên quan trọng trong cuộc sống hàng ngày của chúng ta. Từ các hệ thống nhận dạng giọng nói đến xe tự lái, AI đang cách mạng hóa nhiều ngành công nghiệp."
+}
+
+###
+# Upsert another article
+# POST /api/v1/vectors/upsert
+POST {{recommendationUrl}}/api/v1/vectors/upsert HTTP/1.1
+Content-Type: application/json
+
+{
+  "id": 124,
+  "title": "Machine Learning trong y tế",
+  "content": "Học máy đang được ứng dụng rộng rãi trong lĩnh vực y tế, giúp chẩn đoán bệnh chính xác hơn và phát triển các phương pháp điều trị mới."
+}
+
+###
+# Semantic search with Vietnamese query
+# POST /api/v1/search/semantic
+POST {{recommendationUrl}}/api/v1/search/semantic HTTP/1.1
+Content-Type: application/json
+
+{
+  "query": "tin tức về công nghệ AI",
+  "top_k": 10
+}
+
+###
+# Semantic search with different query
+# POST /api/v1/search/semantic
+POST {{recommendationUrl}}/api/v1/search/semantic HTTP/1.1
+Content-Type: application/json
+
+{
+  "query": "ứng dụng machine learning trong y tế",
+  "top_k": 5
+}
+
+###
+# Get similar articles based on article ID
+# GET /api/v1/recommend/{article_id}?top_k=5
+GET {{recommendationUrl}}/api/v1/recommend/123?top_k=5 HTTP/1.1
+
+###
+# Get more similar articles
+# GET /api/v1/recommend/{article_id}?top_k=10
+GET {{recommendationUrl}}/api/v1/recommend/123?top_k=10 HTTP/1.1
+
+###
+# Get recommendations for another article
+# GET /api/v1/recommend/{article_id}?top_k=5
+GET {{recommendationUrl}}/api/v1/recommend/124?top_k=5 HTTP/1.1
