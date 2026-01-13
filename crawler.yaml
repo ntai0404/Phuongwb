@@ -1,0 +1,18 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: crawler
+  namespace: datn
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: crawler
+  template:
+    metadata:
+      labels:
+        app: crawler
+    spec:
+      containers:
+        - name: crawler
+          image: asia-southeast1-docker.pkg.dev/datn-483421/datn-docker-repo/crawler:1.0

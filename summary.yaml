@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: summary
+  namespace: datn
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: summary
+  template:
+    metadata:
+      labels:
+        app: summary
+    spec:
+      containers:
+        - name: summary
+          image: asia-southeast1-docker.pkg.dev/datn-483421/datn-docker-repo/summary:1.0
+          ports:
+            - containerPort: 8002
+          env:
+            - name: PORT
+              value: "8002"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: summary-svc
+  namespace: datn
+spec:
+  type: ClusterIP
+  selector:
+    app: summary
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8002

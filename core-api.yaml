@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: core-api
+  namespace: datn
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: core-api
+  template:
+    metadata:
+      labels:
+        app: core-api
+    spec:
+      containers:
+        - name: core-api
+          image: asia-southeast1-docker.pkg.dev/datn-483421/datn-docker-repo/core-api:1.0
+          ports:
+            - containerPort: 8080
+          env:
+            - name: PORT
+              value: "8080"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: core-api-svc
+  namespace: datn
+spec:
+  type: NodePort
+  selector:
+    app: core-api
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
