@@ -18,7 +18,7 @@ const resolveApiBaseUrl = () => {
 export const getApiBaseUrl = resolveApiBaseUrl;
 
 const apiClient = axios.create({
-  baseURL: resolveApiBaseUrl(),
+  baseURL: "http://api.vdailytintuc.store",
   headers: {
     'Content-Type': 'application/json',
   },
